@@ -7,6 +7,10 @@ import healpy as hp
 base_outdir = "/home/jorge/Escritorio/Proy_cosmo/Cosmo_MSc/camb_outputs/fiducial"
 os.makedirs(base_outdir, exist_ok=True)
 
+# #lmax = 3*nside - 1 debe ser mayor al dado por camb
+nside = 512
+lmax = 1000
+
 # ---------------------------
 # 1. Simulamos con CAMB el best-fit de Planck con distintos r's
 # ---------------------------
@@ -39,7 +43,6 @@ for r in vect_r:
     )
 
     # Máximo multipolo que queremos
-    lmax = 3000
     pars.set_for_lmax(lmax, lens_potential_accuracy=2)
     
     # ---------------------------
@@ -52,7 +55,7 @@ for r in vect_r:
     # 3. Obtener Cls y matter power spectrum
     # ---------------------------
 
-    powers = results.get_cmb_power_spectra(pars, lmax=3000, CMB_unit='K', spectra=['total', 'unlensed_scalar', 'lens_potential'], raw_cl=True)
+    powers = results.get_cmb_power_spectra(pars, lmax=lmax, CMB_unit='K', spectra=['total', 'unlensed_scalar', 'lens_potential'], raw_cl=True)
     
     # LLamamos los diferentes CLs
     total_Cl = powers['total']
@@ -90,28 +93,34 @@ for r in vect_r:
 
     print("> Generando mapas con healpy ...") 
     np.random.seed(1234)
-    alm_tot = hp.synalm((total_Cl[:, 0], total_Cl[:, 1],total_Cl[:, 2], total_Cl[:, 3]), lmax=3000, new=True)
+    alm_tot_T, alm_tot_E, alm_tot_B = hp.synalm((total_Cl[:, 0], total_Cl[:, 1],total_Cl[:, 2], total_Cl[:, 3]), lmax=lmax, new=True)
     np.random.seed(1234)
-    alm_unlensed = hp.synalm((unlensed_Cl[:, 0], unlensed_Cl[:, 1], unlensed_Cl[:, 2], unlensed_Cl[:, 3]), lmax=3000, new=True)
+    alm_unlensed_T, alm_unlensed_E, alm_unlensed_B = hp.synalm((unlensed_Cl[:, 0], unlensed_Cl[:, 1], unlensed_Cl[:, 2], unlensed_Cl[:, 3]), lmax=lmax, new=True)
 
-    nside = 1024
-    #lmax = 3*nside - 1 debe ser mayor al dado por camb
+    # Debido al peso de los mapas guardamos de manera compacta como alm's y archivo npz
+    np.savez_compressed(
+        os.path.join(r_dir, "cmb_alms_total.npz"),
+        almT=alm_tot_T,  
+        almE=alm_tot_E,  
+        almB=alm_tot_B     
+        )
 
-    cmb_map_total = hp.alm2map(alm_tot, nside=nside, lmax=3000)
-    cmb_map_unlensed = hp.alm2map(alm_unlensed, nside=nside, lmax=3000)
-
-    hp.write_map(os.path.join(r_dir, "map_total_T.fits"), cmb_map_total[0], overwrite=True)
-    hp.write_map(os.path.join(r_dir, "map_total_Q.fits"), cmb_map_total[1], overwrite=True)
-    hp.write_map(os.path.join(r_dir, "map_total_U.fits"), cmb_map_total[2], overwrite=True)
-
-    hp.write_map(os.path.join(r_dir, "map_unlensed_T.fits"), cmb_map_unlensed[0], overwrite=True)
-    hp.write_map(os.path.join(r_dir, "map_unlensed_Q.fits"), cmb_map_unlensed[1], overwrite=True)
-    hp.write_map(os.path.join(r_dir, "map_unlensed_U.fits"), cmb_map_unlensed[2], overwrite=True)
+    np.savez_compressed(
+        os.path.join(r_dir, "cmb_alms_unlensed.npz"),
+        almT=alm_unlensed_T, 
+        almE=alm_unlensed_E, 
+        almB=alm_unlensed_B     
+        )
 
     np.random.seed(1234)
-    map_phi = hp.synfast([lens_potential_Cl[:,0]], nside=nside, lmax=3000, pol=False, new=True)
+    map_phi = hp.synfast([lens_potential_Cl[:,0]], nside=nside, lmax=lmax, pol=False, new=True)
+    alm_phi = hp.map2alm(map_phi, lmax=lmax)
 
-    hp.write_map(os.path.join(r_dir, "map_phiphi.fits"), map_phi, overwrite=True)
+
+    np.savez_compressed(
+        os.path.join(r_dir, "cmb_alms_phi.npz"),
+        alm_phi=alm_phi,     
+        )
 
     print("> Guardando los mapas...")
 

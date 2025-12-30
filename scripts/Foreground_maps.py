@@ -39,10 +39,6 @@ map_145 = sky.get_emission(freq[3]*u.GHz)
 map_225 = sky.get_emission(freq[4]*u.GHz)
 map_280 = sky.get_emission(freq[5]*u.GHz)
 
-# ---------------------------
-# EN VEZ DE GUARDAR LOS MAPAS GUARDAR LOS ALM's es menos pesado supongo
-# ---------------------------
-
 print('Guardando mapas')
 
 hp.write_map(os.path.join(dir_0, "map_27_T.fits"), map_27[0], overwrite=True)
