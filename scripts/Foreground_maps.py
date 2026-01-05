@@ -6,7 +6,7 @@ import pysm3.units as u
 
 base_outdir = "/home/jorge/Escritorio/Proy_cosmo/Cosmo_MSc/camb_outputs/fiducial"
 
-nside = 512
+nside = 128
 
 dir = os.path.join(base_outdir, "Foreground")
 os.makedirs(dir, exist_ok=True)

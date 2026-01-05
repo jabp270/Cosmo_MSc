@@ -2,14 +2,19 @@ import camb
 import numpy as np
 import os
 import healpy as hp
+from utils_JB import make_seeds
 
 # Crear carpeta de salida
 base_outdir = "/home/jorge/Escritorio/Proy_cosmo/Cosmo_MSc/camb_outputs/fiducial"
 os.makedirs(base_outdir, exist_ok=True)
 
 # #lmax = 3*nside - 1 debe ser mayor al dado por camb
-nside = 512
-lmax = 1000
+nside = 128
+lmax = 128
+nsim = 20
+base_seed = 972581
+
+seeds = make_seeds(nsim, base_seed=base_seed)
 
 # ---------------------------
 # 1. Simulamos con CAMB el best-fit de Planck con distintos r's
@@ -85,42 +90,45 @@ for r in vect_r:
 
 ### FALTA AÑADIR EL MATTER POWER SPECTRUM ###
 
-    print(f"> Archivos guardados en {r_dir}\n")
+    print(f"> Generando {nsim} simulaciones")
 
     # ---------------------------
     # 4) Generamos mapas
     # ---------------------------
 
-    print("> Generando mapas con healpy ...") 
-    np.random.seed(1234)
-    alm_tot_T, alm_tot_E, alm_tot_B = hp.synalm((total_Cl[:, 0], total_Cl[:, 1],total_Cl[:, 2], total_Cl[:, 3]), lmax=lmax, new=True)
-    np.random.seed(1234)
-    alm_unlensed_T, alm_unlensed_E, alm_unlensed_B = hp.synalm((unlensed_Cl[:, 0], unlensed_Cl[:, 1], unlensed_Cl[:, 2], unlensed_Cl[:, 3]), lmax=lmax, new=True)
+    for i in range(nsim):
 
-    # Debido al peso de los mapas guardamos de manera compacta como alm's y archivo npz
-    np.savez_compressed(
-        os.path.join(r_dir, "cmb_alms_total.npz"),
-        almT=alm_tot_T,  
-        almE=alm_tot_E,  
-        almB=alm_tot_B     
-        )
+        seed = seeds[i]
 
-    np.savez_compressed(
-        os.path.join(r_dir, "cmb_alms_unlensed.npz"),
-        almT=alm_unlensed_T, 
-        almE=alm_unlensed_E, 
-        almB=alm_unlensed_B     
-        )
+        np.random.seed(seed["cmb"])
+        alm_tot_T, alm_tot_E, alm_tot_B = hp.synalm((total_Cl[:, 0], total_Cl[:, 1],total_Cl[:, 2], total_Cl[:, 3]), lmax=lmax, new=True)
+        np.random.seed(seed["cmb"])
+        alm_unlensed_T, alm_unlensed_E, alm_unlensed_B = hp.synalm((unlensed_Cl[:, 0], unlensed_Cl[:, 1], unlensed_Cl[:, 2], unlensed_Cl[:, 3]), lmax=lmax, new=True)
 
-    np.random.seed(1234)
-    map_phi = hp.synfast([lens_potential_Cl[:,0]], nside=nside, lmax=lmax, pol=False, new=True)
-    alm_phi = hp.map2alm(map_phi, lmax=lmax)
+        # Debido al peso de los mapas guardamos de manera compacta como alm's y archivo npz
+        # np.savez_compressed(
+        #     os.path.join(r_dir, f"cmb_alms_total{i+1}.npz"),
+        #     almT=alm_tot_T,  
+        #     almE=alm_tot_E,  
+        #     almB=alm_tot_B     
+        #     )
+
+        np.savez_compressed(
+            os.path.join(r_dir, f"cmb_alms_unlensed{i+1}.npz"),
+            almT=alm_unlensed_T, 
+            almE=alm_unlensed_E, 
+            almB=alm_unlensed_B     
+            )
+
+        np.random.seed(seed["phi"])
+        map_phi = hp.synfast([lens_potential_Cl[:,0]], nside=nside, lmax=lmax, pol=False, new=True)
+        alm_phi = hp.map2alm(map_phi, lmax=lmax)
 
 
-    np.savez_compressed(
-        os.path.join(r_dir, "cmb_alms_phi.npz"),
-        alm_phi=alm_phi,     
-        )
+        np.savez_compressed(
+            os.path.join(r_dir, f"cmb_alms_phi{i+1}.npz"),
+            alm_phi=alm_phi,     
+            )
 
     print("> Guardando los mapas...")
 
