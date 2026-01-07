@@ -3,65 +3,51 @@ import os
 import healpy as hp
 import pysm3 as pysm
 import pysm3.units as u
+from config import NSIDE, LMAX, NSIM, BASE_SEED
 
-base_outdir = "/home/jorge/Escritorio/Proy_cosmo/Cosmo_MSc/camb_outputs/fiducial"
+def main():
+    ruta_f = "/home/jorge/Escritorio/Proy_cosmo/Cosmo_MSc/outputs/fiducial/Foreground"
 
-nside = 128
+    nside = NSIDE
+    lmax  = LMAX
+    nsim  = NSIM
+    base_seed  = BASE_SEED
 
-dir = os.path.join(base_outdir, "Foreground")
-os.makedirs(dir, exist_ok=True)
+    freq = np.array([27, 39, 93, 145, 225, 280])
 
-### HACER DIVERSOS MODELOS Y CADA UNO GUARDALOS EN UNA CARPETA ###
-# De esta manera luego solo sumo con el CMB aplico beam y window function mas ruido
-# aplicamos wiener filter, luego separacion de componentes HILC
-# A esos mapas aplicamos Delensing interno y comparamos con los originales
-# Luego añadir otros tracers --> combinacion de ellos
+    os.makedirs(ruta_f, exist_ok=True) # crea la carpeta Foreground de ser necesario
 
-# -----------------------------
-# Modelo 1: SIMPLE s1 + d1
-# -----------------------------
+    # -----------------------------
+    # Modelo 1: SIMPLE s1 + d1
+    # -----------------------------
 
-print('Formando mapas del modelo simple')
+    print('Formando mapas del modelo simple')
 
-dir_0 = os.path.join(dir, "Simple")
-os.makedirs(dir_0, exist_ok=True)
+    dir_1 = os.path.join(ruta_f, "Simple")
+    os.makedirs(dir_1, exist_ok=True)
 
-# Crear un cielo fisico con modelos d1 polvo y s1 sincrotron
-sky = pysm.Sky(nside=nside, preset_strings=["d1", "s1"],output_unit="K_CMB") 
+    # Crear un cielo fisico con modelos d1 polvo y s1 sincrotron
+    sky = pysm.Sky(nside=nside, preset_strings=["d1", "s1"],output_unit="K_CMB") 
 
-# vector de frecuencias que queremos los mapas de foregrounds USAMOS LOS DE SO
-freq = np.array([27, 39, 93, 145, 225, 280])
+    for f in freq:
+        print(f"Formando mapas de frecuencia: {f}")
+        map = sky.get_emission(f*u.GHz) #tiene I, Q y U
 
-map_27 = sky.get_emission(freq[0]*u.GHz) #tiene I, Q y U
-map_39 = sky.get_emission(freq[1]*u.GHz)
-map_93 = sky.get_emission(freq[2]*u.GHz)
-map_145 = sky.get_emission(freq[3]*u.GHz)
-map_225 = sky.get_emission(freq[4]*u.GHz)
-map_280 = sky.get_emission(freq[5]*u.GHz)
+        alm_fg_T = hp.map2alm(map[0], lmax=lmax, use_pixel_weights=True)
 
-print('Guardando mapas')
+        alm_fg_E, alm_fg_B = hp.sphtfunc.map2alm_spin(np.array([map[1],map[2]]), spin=2, lmax=lmax)
 
-hp.write_map(os.path.join(dir_0, "map_27_T.fits"), map_27[0], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_39_T.fits"), map_39[0], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_93_T.fits"), map_93[0], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_145_T.fits"), map_145[0], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_225_T.fits"), map_225[0], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_280_T.fits"), map_280[0], overwrite=True)
+        np.savez_compressed(
+                os.path.join(dir_1, f"alms_fg_{f}.npz"),
+                almT=alm_fg_T, 
+                almE=alm_fg_E, 
+                almB=alm_fg_B     
+                )
 
-hp.write_map(os.path.join(dir_0, "map_27_Q.fits"), map_27[1], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_39_Q.fits"), map_39[1], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_93_Q.fits"), map_93[1], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_145_Q.fits"), map_145[1], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_225_Q.fits"), map_225[1], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_280_Q.fits"), map_280[1], overwrite=True)
 
-hp.write_map(os.path.join(dir_0, "map_27_U.fits"), map_27[2], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_39_U.fits"), map_39[2], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_93_U.fits"), map_93[2], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_145_U.fits"), map_145[2], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_225_U.fits"), map_225[2], overwrite=True)
-hp.write_map(os.path.join(dir_0, "map_280_U.fits"), map_280[2], overwrite=True)
+    # -----------------------------
+    # Modelo 2: 
+    # -----------------------------
 
-# -----------------------------
-# Modelo 2: 
-# -----------------------------
+if __name__ == "__main__":
+    main()
