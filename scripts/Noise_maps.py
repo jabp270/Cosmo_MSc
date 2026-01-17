@@ -38,7 +38,11 @@ def main():
 
             N_T_ells = np.ones(lmax + 1)*(noise**2)
 
+            np.savetxt(os.path.join(dir, f"Noise_{freq[i]}_T{j+1}.txt"), N_T_ells)
+
             N_P_ells = np.ones(lmax + 1)*(vect_noise_P[i]**2)
+
+            np.savetxt(os.path.join(dir, f"Noise_{freq[i]}_P{j+1}.txt"), N_P_ells)
 
             np.random.seed(seed["noise_T"])
             alm_T_noise = hp.synalm(N_T_ells, lmax=lmax, new=True)
