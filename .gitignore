@@ -1,1 +1,4 @@
-camb_outputs/
+outputs/
+notebooks/Mapsims.ipynb
+examples/
+__pycache__

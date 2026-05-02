@@ -2,10 +2,10 @@ import numpy as np
 import healpy as hp
 import lenspyx as ls
 import os
-from config import NSIDE, LMAX, NSIM, BASE_SEED
+from config import NSIDE, LMAX, NSIM, BASE_SEED, RUTA_0, RUTA_1
 
 def main():
-    ruta = "/home/jorge/Escritorio/Proy_cosmo/Cosmo_MSc/outputs/fiducial/"
+    ruta = RUTA_1
 
     vect_r = np.array([0,0.01,0.05,0.1])
     names = np.array(["T", "E" , "B"])
