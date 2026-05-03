@@ -11,9 +11,6 @@ class Config:
     beam: list[float]
     noise: list[float]
 
-    base_input: Path
-    base_output: Path
-
     experiment_name: str
 
     base_seed: int = 972581
