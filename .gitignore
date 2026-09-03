@@ -1,3 +1,4 @@
+.vscode
 outputs_main
 notebooks
 test
@@ -6,3 +7,5 @@ __pycache__
 scripts
 map_visualization.ipynb
 Proyect
+.gitignore
+.env
