@@ -115,7 +115,7 @@ def main():
             #     almE=alm_tot_E,  
             #     almB=alm_tot_B     
             #     )
-
+    
             np.savez_compressed(
                 os.path.join(r_dir, f"cmb_alms_unlensed{i+1}.npz"),
                 almT=alm_unlensed_T, 

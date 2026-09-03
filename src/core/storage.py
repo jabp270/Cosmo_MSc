@@ -60,5 +60,7 @@ class StorageManager:
 
     # IN PROCESS / ONGOING
 
+# Global Instance
+storage = StorageManager()
     
 
