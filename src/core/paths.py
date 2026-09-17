@@ -231,14 +231,17 @@ class PathManager:
     def component_separation_dir(
         self,
         create_dir: bool = True,
+        mask_tag: str | None = None,
     ) -> Path:
         """
         Return the path for Component separation method.
         """
-        output = (
-            self.products_dir
-            / "component_separation"
-        )
+
+        if mask_tag:
+            output = self.products_dir / "component_separation" / mask_tag
+
+        else: 
+            output = self.products_dir / "component_separation" 
 
         return (
             self.ensure_directory(output)

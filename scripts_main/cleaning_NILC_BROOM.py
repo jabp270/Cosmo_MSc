@@ -64,9 +64,7 @@ def main() -> None:
 
         instrument=instrument_settings,
 
-        path_outputs=Path(
-            "outputs_main/products/component_separation"
-        ),
+        path_outputs=Path("outputs_main/products/component_separation"),
 
         compsep=[{
             "method": "ilc",
@@ -92,12 +90,12 @@ def main() -> None:
 
         save_compsep_products=True,
 
-        mask_observations=None,
-        mask_covariance=None,
+        mask_observations= "SO_maps/Mask_SO/LAT_a5.0deg.fits",
+        mask_covariance= "SO_maps/Mask_SO/LAT_a5.0deg.fits",
         leakage_correction=None,
 
-        data_type="alms",
-        field_in="TEB",
+        data_type="maps",
+        field_in="TQU",
 
     )
 
@@ -120,6 +118,7 @@ def main() -> None:
     outputs = component_sep.run_many(
         nsims=2, #simulation_config.cmb.nsim
         start_sim=1,
+        mask_tag="LAT_a5.0deg",
     )
 
 if __name__ == "__main__":

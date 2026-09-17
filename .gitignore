@@ -1,5 +1,6 @@
 .vscode
 outputs_main
+SO_maps
 notebooks
 test
 examples
