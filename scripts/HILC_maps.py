@@ -3,12 +3,22 @@ import numpy as np
 import healpy as hp
 from config import NSIDE, LMAX, NSIM
 
-def inv_filter(fil, lmin=2):
+# def inv_filter(fil, lmin=2):
+#     """
+#     Invierte el filtro para que no explote en los l = 0, 1
+#     """
+#     inv = np.zeros_like(fil)
+#     inv[lmin:] = 1.0 / fil[lmin:]
+#     return inv
+
+def inv_filter(fil, lmin=2, eps=1e-8):
     """
-    Invierte el filtro para que no explote en los l = 0, 1
+    Invierte el filtro para que no explote en los l = 0, 1 ni tampoco en otros l's
     """
     inv = np.zeros_like(fil)
-    inv[lmin:] = 1.0 / fil[lmin:]
+    good = np.abs(fil) > eps
+    good[:lmin] = False
+    inv[good] = 1.0 / fil[good]
     return inv
 
 def main():
@@ -36,10 +46,13 @@ def main():
     pwT, pwP = hp.pixwin(nside, pol=True, lmax=lmax) # window pixel
 
     vect_fwhm = np.array([7.4, 5.1, 2.2, 1.4, 1.0, 0.9])*np.pi / (180 * 60) #en radianes
-
+    #target_fwhm = np.max(vect_fwhm)
+    #target_beam = hp.sphtfunc.gauss_beam(fwhm=target_fwhm, lmax=lmax, pol=True)
+    
     list_fil = {}
     for j,f in enumerate(freq):
         list_fil[f] = {}
+        
         beam = hp.sphtfunc.gauss_beam(fwhm=vect_fwhm[j], lmax=lmax, pol=True)
         # bT  = beam[:, 0]   # temperatura
         # bE  = beam[:, 1]   # grad/electric (E)
@@ -47,9 +60,9 @@ def main():
 
         for i, name in enumerate(names):
             if name == "T":
-                fil = beam[:, i] * pwT
+                fil = beam[:, i] * pwT  #/target_beam[:,i]
             else:
-                fil = beam[:, i] * pwP
+                fil = beam[:, i] * pwP  #/target_beam[:,i]
             
             list_fil[f][name] = fil
 
@@ -132,17 +145,17 @@ def main():
                 alm_clean_E += hp.almxfl(dec_almE[f], weights_E[:, i])
                 alm_clean_B += hp.almxfl(dec_almB[f], weights_B[:, i])
 
-                ### calcular el residuo del ruido
+                # ### calcular el residuo del ruido
                  
-                N_T = np.loadtxt(os.path.join(ruta_n, f"Noise_{f}_T{sim + 1}.txt"))
-                N_P = np.loadtxt(os.path.join(ruta_n, f"Noise_{f}_P{sim + 1}.txt"))
-                deconvolved_NT = N_T*(inv_filter(list_fil[f]["T"])**2)
-                deconvolved_NE = N_P*(inv_filter(list_fil[f]["E"])**2)
-                deconvolved_NB = N_P*(inv_filter(list_fil[f]["B"])**2)
+                # N_T = np.loadtxt(os.path.join(ruta_n, f"Noise_{f}_T{sim + 1}.txt"))
+                # N_P = np.loadtxt(os.path.join(ruta_n, f"Noise_{f}_P{sim + 1}.txt"))
+                # deconvolved_NT = N_T*(inv_filter(list_fil[f]["T"])**2)
+                # deconvolved_NE = N_P*(inv_filter(list_fil[f]["E"])**2)
+                # deconvolved_NB = N_P*(inv_filter(list_fil[f]["B"])**2)
 
-                Nl_HILC_T += (weights_T[:, i]**2)*deconvolved_NT
-                Nl_HILC_E += (weights_E[:, i]**2)*deconvolved_NE
-                Nl_HILC_B += (weights_B[:, i]**2)*deconvolved_NB
+                # Nl_HILC_T += (weights_T[:, i]**2)*deconvolved_NT
+                # Nl_HILC_E += (weights_E[:, i]**2)*deconvolved_NE
+                # Nl_HILC_B += (weights_B[:, i]**2)*deconvolved_NB
 
             ### Guardar mapa
 
@@ -153,12 +166,12 @@ def main():
                 almB=alm_clean_B     
                 )
             
-            np.savez_compressed(
-                os.path.join(out_dir_r, f"Nl_HILC{sim+1}.npz"),
-                NT=Nl_HILC_T,  
-                NE=Nl_HILC_E,  
-                NB=Nl_HILC_B     
-                )
+            # np.savez_compressed(
+            #     os.path.join(out_dir_r, f"Nl_HILC{sim+1}.npz"),
+            #     NT=Nl_HILC_T,  
+            #     NE=Nl_HILC_E,  
+            #     NB=Nl_HILC_B     
+            #     )
 
 if __name__ == "__main__":
     main()

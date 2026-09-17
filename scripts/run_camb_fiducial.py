@@ -3,12 +3,12 @@ import numpy as np
 import os
 import healpy as hp
 from utils_JB import make_seeds
-from config import NSIDE, LMAX, NSIM, BASE_SEED
+from config import NSIDE, LMAX, NSIM, BASE_SEED, RUTA_0, RUTA_1
 
 def main():
 
     # Crear carpeta de salida
-    base_outdir = "/home/jorge/Escritorio/Proy_cosmo/Cosmo_MSc/outputs/fiducial"
+    base_outdir = RUTA_1
     os.makedirs(base_outdir, exist_ok=True)
 
     # #lmax = 3*nside - 1 debe ser mayor al dado por camb
@@ -51,7 +51,7 @@ def main():
         )
 
         # Máximo multipolo que queremos
-        pars.set_for_lmax(lmax, lens_potential_accuracy=2)
+        pars.set_for_lmax(lmax, lens_potential_accuracy=5)
         
         # ---------------------------
         # 2. Correr CAMB
@@ -103,8 +103,8 @@ def main():
 
             seed = seeds[i]
 
-            np.random.seed(seed["cmb"])
-            alm_tot_T, alm_tot_E, alm_tot_B = hp.synalm((total_Cl[:, 0], total_Cl[:, 1],total_Cl[:, 2], total_Cl[:, 3]), lmax=lmax, new=True)
+            # np.random.seed(seed["cmb"])
+            # alm_tot_T, alm_tot_E, alm_tot_B = hp.synalm((total_Cl[:, 0], total_Cl[:, 1],total_Cl[:, 2], total_Cl[:, 3]), lmax=lmax, new=True)
             np.random.seed(seed["cmb"])
             alm_unlensed_T, alm_unlensed_E, alm_unlensed_B = hp.synalm((unlensed_Cl[:, 0], unlensed_Cl[:, 1], unlensed_Cl[:, 2], unlensed_Cl[:, 3]), lmax=lmax, new=True)
 
@@ -115,7 +115,7 @@ def main():
             #     almE=alm_tot_E,  
             #     almB=alm_tot_B     
             #     )
-
+    
             np.savez_compressed(
                 os.path.join(r_dir, f"cmb_alms_unlensed{i+1}.npz"),
                 almT=alm_unlensed_T, 

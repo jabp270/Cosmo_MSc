@@ -46,8 +46,35 @@ def main():
 
 
     # -----------------------------
-    # Modelo 2: 
+    # Modelo 2: s6 + d11
     # -----------------------------
+
+    # Nos importa la semilla en los foregrounds?? si al final queremos ver como afecta el ruido residual luego de 
+    # hacer la limpieza
+    print('Formando mapas del modelo s6_d11')
+
+    dir_2 = os.path.join(ruta_f, "s6_d11")
+    os.makedirs(dir_2, exist_ok=True)
+
+    for i in range(nsim):
+
+        # Crear un cielo fisico con modelos d11 polvo y s6 sincrotron
+        sky = pysm.Sky(nside=nside, preset_strings=["d11", "s6"],output_unit="K_CMB") 
+
+        for f in freq:
+            print(f"Formando mapas de frecuencia: {f}")
+            map = sky.get_emission(f*u.GHz) #tiene I, Q y U
+
+            alm_fg_T = hp.map2alm(map[0], lmax=lmax, use_pixel_weights=True)
+
+            alm_fg_E, alm_fg_B = hp.sphtfunc.map2alm_spin(np.array([map[1],map[2]]), spin=2, lmax=lmax)
+
+            np.savez_compressed(
+                    os.path.join(dir_2, f"alms{i}_fg_{f}.npz"),
+                    almT=alm_fg_T, 
+                    almE=alm_fg_E, 
+                    almB=alm_fg_B     
+                    )
 
 if __name__ == "__main__":
     main()
