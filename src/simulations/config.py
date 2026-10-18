@@ -20,6 +20,7 @@ class CmbConfig:
     cmb_seed: int = 10000
     phi_seed: int = 20000
     overwrite: bool = False
+    start_sim: int = 1
 
 # -------------------------------------------------
 # ------------------ Noise ------------------------
@@ -111,7 +112,7 @@ class CleaningConfig:
     # Optional parameters
     fwhm_out: float | None = None
 
-    data_type: str = "alms"
+    data_type: str = "maps"
 
     field_in: str = "TEB"
     field_out: str = "TEB"
@@ -164,47 +165,8 @@ class CleaningConfig:
 
 @dataclass
 class WienerConfig:
-    """
-    Configuration for the Wiener / C-inverse filter.
-
-    method
-        ``"harmonic"`` (per-multipole filter on alm) or ``"cninv"``
-        (cmblensplus optimal pixel-space filter).
-    clean_maps_dir
-        Directory holding the cleaned ``TEB_output_total_*.fits`` maps.
-    out_dir
-        Directory where the filtered alm are written.
-    cl_signal
-        CAMB power spectra with shape ``(lmax+1, 4)`` and columns TT, EE, BB, TE.
-    residual_nl_path
-        NPZ file with the residual-noise spectra (keys given by
-        ``signal_cl_keys``) used in the harmonic filter denominator.
-    """
-
-    method: str = "harmonic"
-
-    nside: int = 2048
-    lmax: int = 3000
-
-    nsim: int = 1
-    start_sim: int = 1
-
-    clean_maps_dir: Path | None = None
-    out_dir: Path | None = None
-
-    lmin: int = 2
-
-    # Harmonic-only ------------------------------------------------
-    signal_cl_keys: tuple[str, str, str] = ("TT", "EE", "BB")
-    residual_nl_path: Path | None = None
-
-    # cninv-only ----------------------------------------------------
-    cl_signal: np.ndarray | None = None
-    beams: np.ndarray | None = None
-    inv_noise_var: np.ndarray | None = None
-    itns: int = 200
-    eps: float = 1e-6
-    verbose: bool = False
+    
+    method: str
 
 
 # -------------------------------------------------
@@ -213,50 +175,31 @@ class WienerConfig:
 
 @dataclass
 class LensingConfig:
-    """
-    Configuration for the lensing reconstruction / delensing.
 
-    clean_maps_dir
-        Directory holding the cleaned ``TEB_output_total_*.fits`` maps.
-    cl_signal
-        CAMB power spectra with shape ``(lmax+1, 4)`` and columns TT, EE, BB, TE.
-    residual_nl
-        Optional dict with residual-noise spectra (TT, EE, BB) for the
-        C-inverse prefiltering of the alm before the quadratic estimators.
-    phi_alm
-        Lensing-potential alm (optional) to delens with instead of the
-        reconstructed potential, e.g. the simulated ``alm_phi``.
-    """
-
-    nside: int = 2048
-    lmax: int = 3000
+    nside: int 
+    lmax: int
 
     # Multipoles used by the quadratic estimators.
-    rlmin: int = 100
-    rlmax: int = 3000
+    rlmin: int
+    rlmax: int 
 
     # Multipoles used by the delensing convolution.
-    elmin: int = 100
-    elmax: int = 3000
+    elmin: int 
+    elmax: int 
+
+    fwhm_out: float
+    Folder_name: str
 
     # Estimators to combine (order: TT, TE, EE, TB, EB, BB).
-    QDO: tuple[bool, ...] = (True, True, True, True, True, False)
+    QDO: tuple[bool, ...] 
 
     nsim: int = 1
     start_sim: int = 1
-
-    # Inputs --------------------------------------------------------
-    clean_maps_dir: Path | None = None
-    cl_signal: np.ndarray | None = None
-    residual_nl: dict[str, np.ndarray] | None = None
 
     # Delensing -----------------------------------------------------
     delens: bool = False
     phi_alm: np.ndarray | None = None
     wiener_e: bool = True
-
-    # Outputs -------------------------------------------------------
-    out_dir: Path | None = None
 
 
 @dataclass

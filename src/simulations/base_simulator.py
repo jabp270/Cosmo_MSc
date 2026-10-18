@@ -55,7 +55,7 @@ class BaseSimulator(ABC):
         if not input_path.is_file():
             raise FileNotFoundError(f"File not found: {input_path}")
 
-        with np.load(input_path, allow_pickle=False) as data:
+        with np.load(input_path, allow_pickle=True) as data:
             return {
                 key: data[key]
                 for key in data.files
@@ -65,6 +65,7 @@ class BaseSimulator(ABC):
         self,
         nsims: int,
         start_sim: int = 0,
+        save: bool = False,
         overwrite: bool = False,
         **kwargs: Any,
     ) -> list[dict[str, Path]]:
@@ -83,12 +84,13 @@ class BaseSimulator(ABC):
             simulation_paths = self.simulate_one(
                 sim=sim,
                 overwrite=overwrite,
+                save=save,
                 **kwargs,
             )
 
             outputs.append(simulation_paths)
 
-        return outputs
+        return outputs # Muchas simulaciones come mucho RAM
 
     
     @abstractmethod

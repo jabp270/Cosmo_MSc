@@ -34,6 +34,7 @@ def main() -> None:
     outputs = noise_sim.run_many(
         nsims=simulation_config.noise.nsim,
         start_sim=1,
+        save=True,
         overwrite=False,
     )
 

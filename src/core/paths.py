@@ -136,6 +136,31 @@ class PathManager:
         )
 
         return self.ensure_directory(output) if create_dir else output
+
+    def cmb_maps_file(
+        self,
+        spectrum: Literal[ "lensed", "unlensed", "lens_potential"],
+        r: float,
+        create_dir: bool = True,
+    ) -> Path:
+        """
+        Return the path for the CMB alm files.
+
+        Parameters
+        ----------
+        - spectrum: The type of CMB spectrum (lensed, unlensed, lens_potential).
+        - r: The tensor-to-scalar ratio.
+        - create_dir Whether to create the directory if it doesn't exist.
+        """
+        output = (
+            self.simulations_dir
+            / "cmb"
+            / "maps"
+            / self.r_tag(r)
+            / spectrum
+        )
+
+        return self.ensure_directory(output) if create_dir else output
     
     #------------------------------------------------------
     #------------------ FOREGROUND ------------------------
@@ -172,6 +197,29 @@ class PathManager:
             else output
         )
 
+    def foreground_maps_dir(
+        self,
+        model_tag: str,
+        frequency_ghz: float,
+        create_dir: bool = True,
+    ) -> Path:
+        """
+        Return the path for foreground directory
+        """
+        output = (
+            self.simulations_dir
+            / "foregrounds"
+            / model_tag
+            / self.frequency_tag(frequency_ghz)
+        )
+
+        return (
+            self.ensure_directory(output)
+            if create_dir
+            else output
+        )
+
+
     #------------------------------------------------------
     #---------------------- NOISE -------------------------
     #------------------------------------------------------
@@ -192,6 +240,31 @@ class PathManager:
             / experiment
             / noise_model
             / "alms"
+            / self.frequency_tag(frequency_ghz)
+        )
+
+        return (
+            self.ensure_directory(output)
+            if create_dir
+            else output
+        )
+
+    def noise_maps_dir(
+        self,
+        experiment: str,
+        frequency_ghz: float,
+        noise_model: str = "white",
+        create_dir: bool = True,
+    ) -> Path:
+        """
+        Return the path for noise alm directory
+        """
+        output = (
+            self.simulations_dir
+            / "noise"
+            / experiment
+            / noise_model
+            / "maps"
             / self.frequency_tag(frequency_ghz)
         )
 
@@ -285,9 +358,64 @@ class PathManager:
         return path 
 
 
-
+    #------------------------------------------------------
+    #---------------- Wiener Filter and CI ----------------
+    #------------------------------------------------------
     
+    def filters_dir(
+        self,
+        create_dir: bool = True,
+    ) -> Path:
+        """
+        Return the path for Component separation method.
+        """
 
+        output = self.products_dir / "filters_(WF/CI)" 
+
+        return (
+            self.ensure_directory(output)
+            if create_dir
+            else output
+        )
+
+
+    #------------------------------------------------------
+    #--------------------- CMB lensing --------------------
+    #------------------------------------------------------
+
+    def cmb_lensing_dir(
+        self,
+        estimator: str,
+        create_dir: bool = True,
+    ) -> Path:
+        """
+        Return the path for CMB lensing method.
+        """
+
+        output = self.products_dir / "Lensing reconstruction" / estimator
+
+        return (
+            self.ensure_directory(output)
+            if create_dir
+            else output
+        )
+
+    def cmb_lensing_dir(
+        self,
+        estimator: str,
+        create_dir: bool = True,
+    ) -> Path:
+        """
+        Return the path for CMB lensing method.
+        """
+
+        output = self.products_dir / "Lensing reconstruction" / estimator
+
+        return (
+            self.ensure_directory(output)
+            if create_dir
+            else output
+        )
 
 # Global Instance
 # path = PathManager(Config.base_dir)

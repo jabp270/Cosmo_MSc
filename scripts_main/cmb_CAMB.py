@@ -29,6 +29,7 @@ def main() -> None:
     outputs = cmb_sim.run_many(
         nsims=simulation_config.cmb.nsim,
         start_sim=1,
+        save=True,
         overwrite=False,
     )
 

@@ -5,6 +5,7 @@ import camb
 import healpy as hp
 import lenspyx as ls
 import numpy as np
+import os
 
 from src.simulations.base_simulator import BaseSimulator
 from src.core.paths import PathManager
@@ -167,6 +168,69 @@ class CmbSimulator(BaseSimulator):
             for name in names
         }
 
+
+    def simulate_one(
+        self,
+        cls: tuple[np.ndarray, np.ndarray],
+        sim: int,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+
+        """
+        Generate lensed T, E and B alms from CAMB power spectra.
+
+        Parameters
+        ----------
+        - cls: 
+            cls[0]: unlensed_total [TT, EE, BB, TE]
+            cls[1]: lens_potential [PP, PT, PE].
+
+        - sim: The simulation index, used to generate random seeds.
+
+        Returns
+        -------
+        A tuple containing the alm coefficients for T, E, B and phi. 
+        """
+        
+        # output_path = self.paths.cmb_alms_file(spectrum="total", r=self.config.r)
+
+        # output_path1 = output_path / f"lmax_{self.config.lmax}_sim_{sim:04d}.fits"
+
+        ell = np.arange(self.config.lmax + 1)
+
+        cmb_cls = cls[0]
+        potential_cls = cls[1]
+
+        # Generate a unique seed for this simulation.
+        seed_cmb = self.config.cmb_seed + sim
+
+        np.random.seed(seed_cmb)
+        alms_cmb = hp.synalm(cls=[cmb_cls[:,0], cmb_cls[:,1], cmb_cls[:,2], cmb_cls[:,3]], lmax= self.config.lmax, new=True)
+
+        # Generate a unique seed for this simulation.
+        seed_phi = self.config.cmb_seed*100 + sim
+
+        np.random.seed(seed_phi)
+        alm_phi = hp.synalm(cls=potential_cls[:,0], lmax= self.config.lmax, new=True)
+
+        # Deflection field:
+        # d_LM = sqrt(L(L+1)) phi_LM
+        deflection_filter = np.sqrt(ell * (ell + 1.0))
+
+        dglm = hp.almxfl(alm_phi, deflection_filter)
+
+        # Lens the CMB alms using lenspyx: return maps T Q U
+        T_len, Q_len, U_len = ls.alm2lenmap(
+            [alms_cmb[0], alms_cmb[1], alms_cmb[2]],
+            dlms=[dglm],  # (gradient) ; curl omitted
+            geometry=("healpix",{"nside": self.config.nside}),
+            epsilon=1e-7,
+            pol=True,
+        )
+
+        # Convert maps TQU to alm TEB  
+        alm_T_len, alm_E_len, alm_B_len = hp.map2alm([T_len, Q_len, U_len], lmax=self.config.lmax, pol=True)
+                
+        return alm_T_len, alm_E_len, alm_B_len, alm_phi
 
     def generate_unlensed_cmb_alms(
         self,
@@ -370,13 +434,13 @@ class CmbSimulator(BaseSimulator):
         return alms
 
 
-    def simulate_one(
+    def apply_lensing_one(
         self,
         sim: int,
         overwrite: bool = False,
     ) -> dict[str, Path]:
         """
-        Generate one complete CMB realization.
+        Generate one complete CMB realization, using the lensing potential to deflect the sky.
         """
 
         path_cls = self.paths.cmb_cls_file(
@@ -385,7 +449,7 @@ class CmbSimulator(BaseSimulator):
 
         powers = self.compute_cls(
             names=[
-                "unlensed_scalar",
+                "unlensed_total",
                 "lens_potential",
                 "total"
             ],
@@ -398,7 +462,7 @@ class CmbSimulator(BaseSimulator):
                 )        
 
         cmb_alms = self.generate_unlensed_cmb_alms(
-            cmb_cls=powers["unlensed_scalar"],
+            cmb_cls=powers["unlensed_total"],
             sim=sim,
             overwrite=overwrite,
         )
@@ -434,6 +498,4 @@ class CmbSimulator(BaseSimulator):
         }
 
         return outputs
-
-
 

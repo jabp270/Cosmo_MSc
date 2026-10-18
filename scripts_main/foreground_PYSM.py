@@ -30,6 +30,7 @@ def main() -> None:
     outputs = foreground_sim.run_many(
         nsims=simulation_config.foreground.nsim,
         start_sim=1,
+        save=True,
         overwrite=False,
     )
 

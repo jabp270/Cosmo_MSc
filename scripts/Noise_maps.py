@@ -25,7 +25,7 @@ def main():
 
     # Añadimos Ruido de LAT en muK-arcmin
     # Ruido para la Temperatura
-    vect_noise_T = np.array([71,36,8.0,10,22,54])*(np.pi/(60*180))*1e-6 #Tiene unidades de muK
+    vect_noise_T = np.array([71,36,8.0,10,22,54])*(np.pi/(60*180))*1e-6 #Tiene unidades de muK ESTO ESTA MAL EL RUIDO IRIA SIN EL 1e-6
 
     # Ruido para la Polarizacion mapas Q y U --> es sqrt(2) mas grande que el de T
     vect_noise_P = vect_noise_T*np.sqrt(2)
