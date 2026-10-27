@@ -249,8 +249,8 @@ def test_1() -> None:
 
     lensing.save_reconstruction(rec=reconstruction,sim=sim)
 
-if __name__ == "__main__":
-    test_1()
+# if __name__ == "__main__":
+#     test_1()
 
 
 ############################################################################
@@ -265,31 +265,29 @@ if __name__ == "__main__":
 ##########################################
 
 
-# /home/jorge/Escritorio/Proy_cosmo/Cosmo_MSc/outputs_main/products/Comp_sep broom simulations/ilc_pixel_bias0.0/cmb_reconstruction
 
-# /home/jorge/Escritorio/Proy_cosmo/Cosmo_MSc/outputs_main/products/Comp_sep broom simulations/ilc_needlet_bias0.001/cosine_0_30_60_100_180_300_500_800_1200_1800_2400_3000/cmb_reconstruction
-
-# Path after component separation 
-maps_cs_dir = Path("/home/jorge/Escritorio/Proy_cosmo/Cosmo_MSc/outputs_main/products/Comp_sep broom simulations/ilc_pixel_bias0.0/cmb_reconstruction")
-
-# Path fiducial Cl's
-fid_cl_dir = Path("outputs_main/simulations/cmb/cls/r_0.00000/lmax_3000.npz")
 
 def main() -> None:
+
+    # Path after component separation 
+    maps_cs_dir = Path("outputs_main/products/component_separation/my_mask_a5.0deg/ilc_pixel_bias0.0_Bpurify/cmb_reconstruction")
+
+    # Path fiducial Cl's
+    fid_cl_dir = Path("outputs_main/simulations/cmb/cls/r_0.00000/lmax_3000.npz")
 
     lensing_settings = LensingConfig(
         nside=2048,
         lmax=3000,
         rlmin=100,
-        rlmax=3000,
+        rlmax=2000,
         elmin=100,
-        elmax=3000,
+        elmax=2000,
         QDO=(True, True, True, True, True, False),
         nsim=1,
-        start_sim=0,
+        start_sim=1,
 
         fwhm_out = 7.4,
-        Folder_name="FULL_ILC_reconstruction"
+        Folder_name="My_mask_ILC_reconstruction"
     )
 
     config = Config(
@@ -309,6 +307,10 @@ def main() -> None:
     # fiducial spectra.
     cl_fid = np.load(fid_cl_dir)["total"] #(ells, 4)
 
+    rlmax = config.lensing.rlmax
+
+    FC = [cl_fid[:rlmax+1,0], cl_fid[:rlmax+1,1], cl_fid[:rlmax+1,2], cl_fid[:rlmax+1,3]]
+
     def load_cs_maps(name, sim):
         path = paths.path_output_cs(
             files_dir=maps_cs_dir, name=name,
@@ -316,12 +318,14 @@ def main() -> None:
         m = hp.read_map(path, field=(0,1,2))  # (3, npix) TEB maps
         return m    
 
+
+
     Cl_BB_del_all = []
     Cl_BB_before_all = []
     Cl_BB_temp_all = []
 
     for sim in range(lensing_settings.start_sim, lensing_settings.start_sim + lensing_settings.nsim):
-    # -------------- PATHS -----------------
+
 
         maps_clean = load_cs_maps(name="output_total", sim=sim) # TEB maps
 
@@ -363,163 +367,12 @@ def main() -> None:
 
         alm_CI = filter.apply_harmonic(alms=alm_obs, transfer=CI_filt)
 
-        reconstruction = lensing.QE_reconstruct_one(FC=[cl_fid[:,0], cl_fid[:,1], cl_fid[:,2], cl_fid[:,3]], OC=[cl_fid[:,0], cl_fid[:,1], cl_fid[:,2], cl_fid[:,3]], alms_CI=alm_CI) #Cl_obs
+        # OCUPAR fc EN OC ES PROVISIONAL DEBEMOS CONOCER EL N_l
+        reconstruction = lensing.QE_reconstruct_one(FC=FC, OC=FC, alms_CI=alm_CI)
 
         lensing.save_reconstruction(rec=reconstruction, sim=sim)
 
-        B_temp, B_del = lensing.delens_one(almB=alm_obs[2], almE=alm_obs[1], phi_alm=reconstruction["glm"].get("MV"), save=True, sim=sim)
+        # B_temp, B_del = lensing.delens_one(almB=alm_obs[2], almE=alm_obs[1], phi_alm=reconstruction["glm"].get("MV"), save=True, sim=sim)
 
-    #     # ============================================================
-    #     # POWER SPECTRA BEFORE / TEMPLATE / AFTER DELENSING
-    #     # ============================================================
-
-    #     # B_template y B_del están en formato curvedsky [l,m]
-    #     Cl_BB_temp = cs_utils.alm2cl(B_temp)
-
-    #     Cl_BB_del = cs_utils.alm2cl(B_del)
-
-    #     # alm_obs[2] está en formato Healpy
-    #     Cl_BB_before = hp.alm2cl(alm_obs[2],lmax=lensing_settings.lmax,)
-
-    #     # Guardar para promediar sobre simulaciones
-    #     Cl_BB_temp_all.append(Cl_BB_temp)
-
-    #     Cl_BB_del_all.append(Cl_BB_del)
-
-    #     Cl_BB_before_all.append(Cl_BB_before)
-
-    # # ============================================================
-    # # AVERAGE OVER SIMULATIONS
-    # # ============================================================
-
-    # Cl_BB_temp_all = np.asarray(
-    #     Cl_BB_temp_all
-    # )
-
-    # Cl_BB_del_all = np.asarray(
-    #     Cl_BB_del_all
-    # )
-
-    # Cl_BB_before_all = np.asarray(
-    #     Cl_BB_before_all
-    # )
-
-    # mean_Cl_BB_temp = np.mean(
-    #     Cl_BB_temp_all,
-    #     axis=0,
-    # )
-
-    # mean_Cl_BB_del = np.mean(
-    #     Cl_BB_del_all,
-    #     axis=0,
-    # )
-
-    # mean_Cl_BB_before = np.mean(
-    #     Cl_BB_before_all,
-    #     axis=0,
-    # )
-
-    # # ============================================================
-    # # FIDUCIAL BB WITH THE SAME COMMON BEAM
-    # # ============================================================
-
-    # ell = np.arange(
-    #     lensing_settings.lmax + 1
-    # )
-
-    # fwhm_rad = np.deg2rad(
-    #     lensing_settings.fwhm_out / 60.0
-    # )
-
-    # beam = hp.gauss_beam(
-    #     fwhm=fwhm_rad,
-    #     lmax=lensing_settings.lmax,
-    #     pol=True,
-    # )
-
-    # beam_B = beam[:, 2]
-
-    # Cl_BB_fid = cl_fid[:, 2]
-
-    # Cl_BB_fid_beam = (
-    #     beam_B**2 * Cl_BB_fid
-    # )
-
-    # # ============================================================
-    # # DELENSING EFFICIENCY
-    # # ============================================================
-
-    # epsilon_fid = np.full(
-    #     lensing_settings.lmax + 1,
-    #     np.nan,
-    # )
-
-    # epsilon_before = np.full(
-    #     lensing_settings.lmax + 1,
-    #     np.nan,
-    # )
-
-
-    # valid_fid = (
-    #     (ell >= lensing_settings.elmin)
-    #     & (ell <= lensing_settings.elmax)
-    #     & (Cl_BB_fid_beam > 0.0)
-    # )
-
-    # epsilon_fid[valid_fid] = (
-    #     1.0
-    #     - mean_Cl_BB_del[valid_fid]
-    #     / Cl_BB_fid_beam[valid_fid]
-    # )
-
-    # valid_before = (
-    #     (ell >= lensing_settings.elmin)
-    #     & (ell <= lensing_settings.elmax)
-    #     & (mean_Cl_BB_before > 0.0)
-    # )
-
-    # epsilon_before[valid_before] = (
-    #     1.0
-    #     - mean_Cl_BB_del[valid_before]
-    #     / mean_Cl_BB_before[valid_before]
-    # )
-
-    # output_dir = (
-    #     Path(config.base_dir)
-    #     / "products"
-    #     / "delensing"
-    #     / lensing_settings.Folder_name
-    # )
-
-    # output_dir.mkdir(
-    #     parents=True,
-    #     exist_ok=True,
-    # )
-
-    # output_file = (
-    #     output_dir
-    #     / "delensing_efficiency.npz"
-    # )
-
-    # np.savez(
-    #     output_file,
-    #     ell=ell,
-
-    #     Cl_BB_fid=Cl_BB_fid,
-    #     Cl_BB_fid_beam=Cl_BB_fid_beam,
-
-    #     Cl_BB_before=mean_Cl_BB_before,
-    #     Cl_BB_template=mean_Cl_BB_temp,
-    #     Cl_BB_del=mean_Cl_BB_del,
-
-    #     epsilon_fid=epsilon_fid,
-    #     epsilon_before=epsilon_before,
-    # )
-
-    # print(
-    #     f"[SAVE] Delensing efficiency: "
-    #     f"{output_file}"
-    # )
-
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

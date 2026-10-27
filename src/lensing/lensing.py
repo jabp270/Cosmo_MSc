@@ -7,6 +7,7 @@ import numpy as np
 from curvedsky import delens, norm_quad, rec_lens, utils as cs_utils
 
 from src.simulations.config import LensingConfig
+from src.simulations.cmb_simulator import CmbSimulator
 from src.core.paths import PathManager
 
 
@@ -14,6 +15,7 @@ class CmbLensing():
 
     def __init__(self, config):
 
+        self.cfg = config
         self.config = config.lensing
         self.paths = PathManager(config.base_dir)
         
@@ -48,6 +50,7 @@ class CmbLensing():
         FC: np.ndarray,
         OC: np.ndarray,
         alms_CI: list,
+        normalize: bool = True,
     ) -> dict[str, np.ndarray]:
         """
         Reconstruct the lensing-potential alm of one realization.
@@ -64,7 +67,6 @@ class CmbLensing():
         cfg = self.config
 
         Ag, Ac, Wg, Wc = self.compute_normalizations(FC,OC)
-
 
         # Convert Healpy to Healpix the (lmax+1, lmax+1) ['l,m'] layout and truncate to rlmax.
         T = cs_utils.lm_healpy2healpix(alms_CI[0], lmax=cfg.lmax)
@@ -108,6 +110,10 @@ class CmbLensing():
             glm[q] = r[0] #gradient
             clm[q] = r[1] #curl
 
+
+        if not normalize:
+            return {"glm": glm, "clm": clm, "Ag": Ag, "Ac": Ac}
+
         # Normalize each estimator.
         for qi, q in enumerate(self.ESTIMATORS):
             if q in glm:
@@ -128,6 +134,7 @@ class CmbLensing():
         clm["MV"] = clm_mv
 
         return {"glm": glm, "clm": clm, "Ag": Ag, "Ac": Ac}
+
 
     def save_reconstruction(
         self,
@@ -192,6 +199,238 @@ class CmbLensing():
         )
 
         return 
+
+    # ---------------------------------------------------------------
+    # Mean field (MF)
+    # ---------------------------------------------------------------  
+
+
+    def QE_mv_mean_field_corrected(
+        self,
+        rec_raw,
+        mean_field,
+    ):
+        """
+        Construye el estimador MV a partir de QE individuales
+        sin normalizar y corregidos por su mean field.
+
+        Parameters
+        ----------
+        rec_raw : dict
+            Salida de QE_reconstruct_one(normalize=False).
+
+        mean_field : dict
+            Mean field sin normalizar por estimador:
+            {"TT": alm, "TE": alm, ...}
+
+        Returns
+        -------
+        np.ndarray
+            Estimador gradiente MV corregido por mean field,
+            en formato curvedsky [L, m].
+        """
+
+        Ag = rec_raw["Ag"]
+        Wg = rec_raw["Wg"]
+        raw_glm = rec_raw["glm"]
+
+        lmax = self.config.lmax
+
+        glm_mv = np.zeros((lmax + 1, lmax + 1),dtype=np.float64)
+
+        for qi, q in enumerate(self.ESTIMATORS):
+
+            if q not in raw_glm:
+                continue
+
+            # Sustraer mean field sin normalizar
+            glm_corr = raw_glm[q] - mean_field[q]
+
+            # Normalizar estimador individual
+            glm_corr = glm_corr * Ag[qi, :, None]
+
+            # 3. Aplicar peso MV de curvedsky
+            glm_mv += Wg[qi, :, None] * glm_corr
+
+        # 4. Normalización final MV
+        glm_mv *= Ag[5, :, None]
+
+        return glm_mv
+
+
+
+# que reciba el Cl del cmb, la mascara, el numero de sim, y que con la semilla puede reproducir los mapas y hacer el QE a cada uno de forma recursiva. todos tienen que estar lenseados por el mismo potencial?? 
+# o es que 
+        
+    def _mask_and_filter_cmb(
+        self,
+        alms,
+        mask,
+        CI,
+        lmax,
+        nside,
+    ):
+        """
+        Aplica máscara a mapas T/Q/U y filtra los alms
+        resultantes con CI_T, CI_E y CI_B.
+        """
+
+        alm_T, alm_E, alm_B = alms
+        CI_T, CI_E, CI_B = CI
+
+        mask = np.asarray(mask, dtype=np.float64)
+
+        #Alms -> mapas T/Q/U
+        maps_TQU = hp.alm2map(
+            [alm_T, alm_E, alm_B],
+            nside=nside,
+            lmax=lmax,
+            pol=True,
+        )
+
+        #Aplicar máscara
+        masked_TQU = maps_TQU * mask[None, :]
+
+        # Mapas enmascarados -> alms T/E/B
+        alm_T_mask, alm_E_mask, alm_B_mask = hp.map2alm(
+            masked_TQU,
+            lmax=lmax,
+            pol=True,
+            iter=0,
+        )
+
+        # Aplicar filtros diagonales
+        alm_CI = (
+            hp.almxfl(alm_T_mask, CI_T),
+            hp.almxfl(alm_E_mask, CI_E),
+            hp.almxfl(alm_B_mask, CI_B),
+        )
+
+        return alm_CI
+
+
+    def cmb_mean_field(
+        self,
+        cl,
+        mask,
+        lmax,
+        nside,
+        nsim,
+        start_sim,
+        normalize: bool = False,
+    ):
+        """
+        Calcula el mean field para cada
+        estimador cuadrático de lensing.
+
+        Returns
+        -------
+        dict[str, np.ndarray]
+            {
+                "TT": alm_mean_TT,
+                "TE": alm_mean_TE,
+                "EE": alm_mean_EE,
+                "TB": alm_mean_TB,
+                "EB": alm_mean_EB,
+            }
+
+            Los alms están en formato curvedsky [L, m].
+            Solo incluye estimadores habilitados en QDO.
+        """
+
+        mask = np.asarray(mask, dtype=np.float64)
+
+
+        # Espectros CMB
+        cl_unl = np.asarray(cl["unlensed_total"])
+        cl_phi = np.asarray(cl["lens_potential"])
+        cl_len = np.asarray(cl["total"])
+
+        # self.cfg contiene el Config completo
+        cmb = CmbSimulator(self.cfg)
+
+        rlmin = self.config.rlmin
+        rlmax = self.config.rlmax
+
+
+        # Construir filtros CI
+        ell = np.arange(lmax + 1)
+        valid = (ell >= rlmin) & (ell <= rlmax)
+
+        filters = []
+        for idx in range(3):
+            spectrum = cl_len[:lmax + 1, idx]
+            CI = np.zeros(lmax + 1)
+            CI[valid] = 1.0 / spectrum[valid]
+            filters.append(CI)
+
+
+        # Espectros fiduciales y observados
+        FC = [
+            cl_len[:lmax + 1, 0],
+            cl_len[:lmax + 1, 1],
+            cl_len[:lmax + 1, 2],
+            cl_len[:lmax + 1, 3],
+        ]
+
+        OC = FC
+
+
+        #Solo para el inicio de la suma
+        mf_sum = None
+
+        # Simulaciones Monte Carlo
+
+        for sim in range(start_sim, start_sim + nsim):
+
+            # CMB lenseado
+            alm_T, alm_E, alm_B, alm_phi = cmb.simulate_one(
+                cls=(cl_unl, cl_phi),
+                sim=sim,
+                same_phi=False,
+            )
+
+            # Enmascarar y filtrar
+            alm_CI = self._mask_and_filter_cmb(
+                alms=(alm_T, alm_E, alm_B),
+                mask=mask,
+                CI=filters,
+                lmax=lmax,
+                nside=nside,
+            )
+
+            # QE
+            rec = self.QE_reconstruct_one(
+                FC=FC,
+                OC=OC,
+                alms_CI=alm_CI,
+                normalize=normalize,
+            )
+
+            glm = rec["glm"]
+
+            # Inicia sola vez
+            if mf_sum is None:
+                mf_sum = {est: np.zeros_like(alm, dtype=np.complex128) for est, alm in glm.items()}
+
+            # Acumular cada QE sin normalizar
+            for est, alm in glm.items():
+
+                mf_sum[est] += alm
+
+            print(f"[Mean Field] {sim - start_sim + 1}/{nsim}")
+
+
+        # Promedio Monte Carlo
+
+        mean_field = {est: alm_sum / nsim for est, alm_sum in mf_sum.items()}
+
+        print(f"\n[OK] Mean field calculado con {nsim} simulaciones")
+
+        return mean_field
+
+
+
 
     # ---------------------------------------------------------------
     # Iterative Reconstruction gradient + Curl

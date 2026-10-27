@@ -5,8 +5,12 @@
 # Aumentar stack, se utiliza para variables temporales. El limite normal es de 8 Mib (Esto explica el segmentation fault)
 ulimit -s unlimited
 
+#### RUN  QE_reconstruction
 
-/usr/bin/time -v python -u -X faulthandler scripts_main/QE_reconstruction.py 2> time.log
+# /usr/bin/time -v python -u -X faulthandler scripts_main/QE_reconstruction.py 2> time.log
+
+#### RUN mean_field
+/usr/bin/time -v python -u -X faulthandler scripts_main/mean_field.py 2> time.log
 
 status=$?
 

@@ -93,14 +93,9 @@ class CmbSimulator(BaseSimulator):
                 f"Invalid CAMB spectra: {sorted(invalid_names)}"
             )
 
-        output_dir = self.paths.cmb_cls_file(
-            r=self.config.r,
-        )
+        output_dir = self.paths.cmb_cls_file(r=self.config.r)
 
-        output_file = (
-            output_dir
-            / f"lmax_{self.config.lmax}.npz"
-        )
+        output_file = (output_dir / f"lmax_{self.config.lmax}.npz")
 
         # If overwrite=True or the file does not exist,
         # compute all requested spectra.
@@ -108,10 +103,7 @@ class CmbSimulator(BaseSimulator):
             output_file,
             overwrite=overwrite,
         ):
-            print(
-                "[CAMB] Computing spectra: "
-                + ", ".join(names)
-            )
+            print("[CAMB] Computing spectra: " + ", ".join(names))
 
             pars, results = self.get_camb_results()
 
@@ -123,14 +115,9 @@ class CmbSimulator(BaseSimulator):
                 raw_cl=True,
             )
 
-            arrays_to_save = {
-                name: powers[name]
-                for name in names
-            }
+            arrays_to_save = {name: powers[name] for name in names}
 
-            arrays_to_save["ell"] = np.arange(
-                self.config.lmax + 1
-            )
+            arrays_to_save["ell"] = np.arange(self.config.lmax + 1)
 
             self.save_npz(
                 output_dir,
@@ -140,19 +127,12 @@ class CmbSimulator(BaseSimulator):
 
             print(f"[SAVE] CMB spectra: {output_file}")
 
-            return {
-                name: powers[name]
-                for name in names
-            }
+            return {name: powers[name] for name in names}
 
         # Otherwise, load the existing file.
         stored = self.load_npz(output_file)
 
-        missing_in_file = [
-            name
-            for name in names
-            if name not in stored
-        ]
+        missing_in_file = [name for name in names if name not in stored]
 
         if missing_in_file:
             raise KeyError(
@@ -163,16 +143,14 @@ class CmbSimulator(BaseSimulator):
 
         print(f"[LOAD] CMB spectra: {output_file}")
 
-        return {
-            name: stored[name]
-            for name in names
-        }
+        return {name: stored[name] for name in names}
 
 
     def simulate_one(
         self,
         cls: tuple[np.ndarray, np.ndarray],
         sim: int,
+        same_phi: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 
         """
@@ -206,8 +184,13 @@ class CmbSimulator(BaseSimulator):
         np.random.seed(seed_cmb)
         alms_cmb = hp.synalm(cls=[cmb_cls[:,0], cmb_cls[:,1], cmb_cls[:,2], cmb_cls[:,3]], lmax= self.config.lmax, new=True)
 
-        # Generate a unique seed for this simulation.
-        seed_phi = self.config.cmb_seed*100 + sim
+        if not same_phi:
+            # Generate a unique seed for this simulation.
+            seed_phi = self.config.cmb_seed*100 + sim
+
+        if same_phi:
+            # Generate a unique seed for every simulation
+            seed_phi = self.config.cmb_seed
 
         np.random.seed(seed_phi)
         alm_phi = hp.synalm(cls=potential_cls[:,0], lmax= self.config.lmax, new=True)
