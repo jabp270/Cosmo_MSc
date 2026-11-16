@@ -17,15 +17,9 @@ fid_cl_dir = Path("outputs_main/simulations/cmb/cls/r_0.00000/lmax_3000.npz")
 cl_fid = np.load(fid_cl_dir)["total"]
 
 # FITS que utilizará BROOM
-fid_cl_fits = Path(
-    "outputs_main/simulations/cmb/cls/r_0.00000/lmax_3000.fits"
-)
+fid_cl_fits = Path("outputs_main/simulations/cmb/cls/r_0.00000/lmax_3000.fits")
 
-hp.write_cl(
-    fid_cl_fits,
-    cl_fid.T,
-    overwrite=True,
-)
+hp.write_cl(fid_cl_fits, cl_fid.T, overwrite=True)
 
 # Path products
 prod_dir = Path("outputs_main/results/plots/BROOM")
@@ -124,11 +118,11 @@ config_values = {
     # FOREGROUND CONFIG
     # --------------------------------------
 
-    "foreground_models": ["s6", "d11"], #"s6", "d11"
+    "foreground_models": ["s1", "d1"], #"s6", "d11"
 
     "generate_input_foregrounds": True,
 
-    "return_fgd_components": False, # Whether to return individual foreground components.
+    "return_fgd_components": True, # Whether to return individual foreground components.
 
     "bandpass_integrate": False, # Whether to integrate sky components across bandpasses.
 

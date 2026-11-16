@@ -98,19 +98,20 @@ def main() -> None:
                 "method": "ilc",
                 "domain": "pixel",
                 "component_out": "cmb",
+                "save_weights": False,
             }
         ],
 
         bring_to_common_resolution=False,
 
-        pixel_window_in=False, ### NO CACHO MUY BIEN A QUE SE REFIEREN
-        pixel_window_out=False,
+        pixel_window_in=True, ### NO CACHO MUY BIEN A QUE SE REFIEREN
+        pixel_window_out=True,
 
         save_compsep_products=True,
 
         mask_observations= "SO_maps/Mask_SO/my_mask_a5.0deg.fits", #"SO_maps/Mask_SO/LAT_a5.0deg.fits",
         mask_covariance= None,
-        leakage_correction="B_purify", #True B_recycling_iterations3   B_inpainting
+        leakage_correction="True",    #"B_purify", True, B_recycling_iterations3,  B_inpainting
 
         data_type="maps",
         field_in="TQU",
@@ -141,7 +142,7 @@ def main() -> None:
 
     for sim in range(cmb_settings.start_sim, cmb_settings.start_sim + cmb_settings.nsim):
 
-        maps_clean = sim_pipe.obs_maps(cls=[cl_unl, cl_phi], sim=sim, save=False, overwrite=False, output_prod= prod_dir, mask_tag="my_mask_a5.0deg") #"LAT_a5.0deg"
+        maps_clean = sim_pipe.obs_maps(cls=[cl_unl, cl_phi], sim=sim, save=False, overwrite=False, output_prod= prod_dir, mask_tag="my_mask_a5.0deg", return_cmb=True, return_fgds=True, return_noise=True) #"LAT_a5.0deg"
         
 if __name__ == "__main__":
     main()

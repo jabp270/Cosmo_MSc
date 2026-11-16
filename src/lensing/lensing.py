@@ -380,7 +380,6 @@ class CmbLensing():
         mf_sum = None
 
         # Simulaciones Monte Carlo
-
         for sim in range(start_sim, start_sim + nsim):
 
             # CMB lenseado

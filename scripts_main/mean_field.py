@@ -56,10 +56,7 @@ def test_0() -> None:
     lensing = CmbLensing(config)
 
     #Cargar espectros
-    powers = cmb.compute_cls(
-        names=["unlensed_total", "lens_potential", "total"],
-        overwrite=False,
-    )
+    powers = cmb.compute_cls(names=["unlensed_total", "lens_potential", "total"], overwrite=False)
 
     # Cargar máscara
     path_mask = "SO_maps/Mask_SO/my_mask.fits"

@@ -258,6 +258,111 @@ def test_1() -> None:
 # SOLO PARA COMPARAR SALIDAS DEL QE
 ############################################################################
 
+# tercer test: CMB + mascara 
+def test_2() -> None:
+
+    normalize = True
+
+    sim = 1
+
+    nside = 2048
+    lmax = 3000
+
+    rlmin = 100
+    rlmax = 3000
+
+    cmb_settings = CmbConfig(
+        nside=nside,
+        lmax=lmax,
+        r=0.0,
+        nsim=1,
+        start_sim=sim,
+    )
+
+    lensing_settings = LensingConfig(
+        nside=nside,
+        lmax=lmax,
+        rlmin=rlmin,
+        rlmax=rlmax,
+        elmin=rlmin,
+        elmax=rlmax,
+        QDO=(True, True, True, True, True, False),
+        nsim=1,
+        start_sim=sim,
+        fwhm_out=0.0,
+        Folder_name="TEST_MASK_CMB_ONLY",
+    )
+
+    config = Config(
+        base_dir="outputs_main",
+        cmb=cmb_settings,
+        lensing=lensing_settings,
+    )
+
+    cmb = CmbSimulator(config)
+    lensing = CmbLensing(config)
+
+    # Cargar máscara
+    path_mask = "SO_maps/Mask_SO/my_mask.fits"
+
+    mask = hp.read_map(path_mask)
+
+
+    #Cargar spectros
+    powers = cmb.compute_cls(names=["unlensed_total", "lens_potential", "total"], overwrite=False)
+
+    cl_len = powers["total"]
+
+    cl_unl = powers["unlensed_total"]
+
+    cl_phi = powers["lens_potential"]
+
+    #hacer simulaciones
+    alm_T, alm_E, alm_B, alm_phi = cmb.simulate_one(cls=(cl_unl, cl_phi), sim=sim)
+
+    print("[OK] Lensed CMB generated")
+
+    # Filtro CI
+    ell = np.arange(lmax + 1)
+    valid = (ell >= rlmin) & (ell <= rlmax)
+
+    filters = []
+    for idx in range(3):
+        spectrum = cl_len[:lmax + 1, idx]
+        CI = np.zeros(lmax + 1)
+        CI[valid] = 1.0 / spectrum[valid]
+        filters.append(CI)
+
+
+    alm_CI = lensing._mask_and_filter_cmb(
+        alms=(alm_T, alm_E, alm_B),
+        mask=mask,
+        CI=filters,
+        lmax=config.cmb.lmax,
+        nside=config.cmb.nside,
+    )
+
+    print("[OK] Harmonic filtering completed")
+
+    # QUADRATIC ESTIMATOR
+    # FC: Fiducial CMB spectra
+    # OC: Observed CMB spectra
+
+    FC = [cl_len[:, 0],cl_len[:, 1],cl_len[:, 2],cl_len[:, 3]]
+
+    OC = [cl_len[:, 0],cl_len[:, 1],cl_len[:, 2],cl_len[:, 3]]
+
+    reconstruction = lensing.QE_reconstruct_one(FC=FC,OC=OC,alms_CI=alm_CI, normalize=normalize)
+
+    lensing.save_reconstruction(rec=reconstruction, sim=sim)
+
+    print("[OK] Lensing reconstruction completed")
+
+if __name__ == "__main__":
+    test_2()
+
+
+
 
 
 ##########################################
@@ -326,7 +431,6 @@ def main() -> None:
 
     for sim in range(lensing_settings.start_sim, lensing_settings.start_sim + lensing_settings.nsim):
 
-
         maps_clean = load_cs_maps(name="output_total", sim=sim) # TEB maps
 
         # Observed Cls
@@ -374,5 +478,5 @@ def main() -> None:
 
         # B_temp, B_del = lensing.delens_one(almB=alm_obs[2], almE=alm_obs[1], phi_alm=reconstruction["glm"].get("MV"), save=True, sim=sim)
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

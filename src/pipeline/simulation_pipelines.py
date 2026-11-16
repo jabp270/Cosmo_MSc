@@ -107,4 +107,4 @@ class pipeline_simulation:
             plot_teb(data1.total[0], output_dir=output_prod, name="Clean maps")
 
 
-        return data1 # TEB maps with leakage purification by Broom
+        return data1
